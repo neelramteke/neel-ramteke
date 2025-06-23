@@ -1,281 +1,343 @@
 /**
- * Server-side Supabase client and comprehensive admin functions
- * for complete portfolio CMS management
+ * Server-side Supabase client with admin privileges
  */
-
-import { createClient, type PostgrestSingleResponse } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js"
 import type { Database } from "./types_db"
 
-/* ───────────────────────── env-safe client ────────────────────────── */
-const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error("Supabase credentials are missing. Check SUPABASE_URL / KEY env vars.")
-}
-
-const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false },
+export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
 })
 
-/* ────────────────────────────────────────── helpers ─────────────────── */
-async function safeSelect<T>(table: string, orderBy?: { column: string; ascending?: boolean }): Promise<T[]> {
-  let query = supabase.from<T>(table).select("*")
-  if (orderBy) query = query.order(orderBy.column, { ascending: orderBy.ascending })
-
-  const { data, error } = (await query) as PostgrestSingleResponse<T[]>
-
-  if (error?.code === "42P01") return []
-  if (error) throw error
-  return data ?? []
-}
-
-async function safeSelectSingle<T>(table: string): Promise<T | null> {
-  const { data, error } = await supabase.from<T>(table).select("*").single()
-
-  if (error?.code === "42P01") return null
-  if (error && error.code !== "PGRST116") throw error
-  return data as T | null
-}
-
-/* ───────────────────────────── Site Settings ─────────────────────────── */
-export const getSiteSettings = () => safeSelectSingle<any>("site_settings")
-export const updateSiteSettings = async (payload: any) => {
-  const { error } = await supabase.from("site_settings").upsert(payload)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Hero Section ─────────────────────────── */
-export const getHeroSection = () => safeSelectSingle<any>("hero_section")
-export const updateHeroSection = async (payload: any) => {
-  const { error } = await supabase.from("hero_section").upsert(payload)
-  if (error) throw error
-}
-
-/* ───────────────────────────── About Section ─────────────────────────── */
-export const getAboutSection = () => safeSelectSingle<any>("about_section")
-export const updateAboutSection = async (payload: any) => {
-  const { error } = await supabase.from("about_section").upsert(payload)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Personal Info ─────────────────────────── */
-export const getPersonalInfo = async () => {
-  const { data, error } = await supabase.from("personal_info").select("*")
-
-  if (error?.code === "42P01") return null
-  if (error) throw error
-
-  return data && data.length > 0 ? (data[0] as (typeof data)[number]) : null
-}
-
-export const updatePersonalInfo = async (payload: any) => {
-  const { error } = await supabase.from("personal_info").upsert(payload)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Skills ─────────────────────────── */
-export const getSkills = () => safeSelect<any>("skills", { column: "order_index" })
-export const createSkill = async (row: any) => {
-  const { data, error } = await supabase.from("skills").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateSkill = async (id: string, row: any) => {
-  const { error } = await supabase.from("skills").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteSkill = async (id: string) => {
-  const { error } = await supabase.from("skills").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Tools ─────────────────────────── */
-export const getTools = () => safeSelect<any>("tools", { column: "order_index" })
-export const createTool = async (row: any) => {
-  const { data, error } = await supabase.from("tools").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateTool = async (id: string, row: any) => {
-  const { error } = await supabase.from("tools").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteTool = async (id: string) => {
-  const { error } = await supabase.from("tools").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Experiences ─────────────────────────── */
-export const getExperiences = () => safeSelect<any>("experiences", { column: "order_index" })
-export const createExperience = async (row: any) => {
-  const { data, error } = await supabase.from("experiences").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateExperience = async (id: string, row: any) => {
-  const { error } = await supabase.from("experiences").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteExperience = async (id: string) => {
-  const { error } = await supabase.from("experiences").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Products ─────────────────────────── */
-export const getProducts = () => safeSelect<any>("products", { column: "order_index" })
-export const createProduct = async (row: any) => {
-  const { data, error } = await supabase.from("products").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateProduct = async (id: string, row: any) => {
-  const { error } = await supabase.from("products").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteProduct = async (id: string) => {
-  const { error } = await supabase.from("products").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Projects ─────────────────────────── */
-export const getProjects = () => safeSelect<any>("projects", { column: "order_index" })
-export const createProject = async (row: any) => {
-  const { data, error } = await supabase.from("projects").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateProject = async (id: string, row: any) => {
-  const { error } = await supabase.from("projects").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteProject = async (id: string) => {
-  const { error } = await supabase.from("projects").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Case Studies ─────────────────────────── */
-export const getCaseStudies = () => safeSelect<any>("case_studies", { column: "order_index" })
-export const createCaseStudy = async (row: any) => {
-  const { data, error } = await supabase.from("case_studies").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateCaseStudy = async (id: string, row: any) => {
-  const { error } = await supabase.from("case_studies").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteCaseStudy = async (id: string) => {
-  const { error } = await supabase.from("case_studies").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Education ─────────────────────────── */
-export const getEducation = () => safeSelect<any>("education", { column: "order_index" })
-export const createEducation = async (row: any) => {
-  const { data, error } = await supabase.from("education").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateEducation = async (id: string, row: any) => {
-  const { error } = await supabase.from("education").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteEducation = async (id: string) => {
-  const { error } = await supabase.from("education").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Certifications ─────────────────────────── */
-export const getCertifications = () => safeSelect<any>("certifications", { column: "order_index" })
-export const createCertification = async (row: any) => {
-  const { data, error } = await supabase.from("certifications").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateCertification = async (id: string, row: any) => {
-  const { error } = await supabase.from("certifications").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteCertification = async (id: string) => {
-  const { error } = await supabase.from("certifications").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Animated Stats ─────────────────────────── */
-export const getAnimatedStats = () => safeSelect<any>("animated_stats", { column: "order_index" })
-export const createAnimatedStat = async (row: any) => {
-  const { data, error } = await supabase.from("animated_stats").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateAnimatedStat = async (id: string, row: any) => {
-  const { error } = await supabase.from("animated_stats").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteAnimatedStat = async (id: string) => {
-  const { error } = await supabase.from("animated_stats").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Contact Messages ─────────────────────────── */
-export const getContactMessages = () => safeSelect<any>("contact_messages", { column: "created_at", ascending: false })
-export const createContactMessage = async (row: any) => {
-  const { data, error } = await supabase.from("contact_messages").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateContactMessage = async (id: string, row: any) => {
-  const { error } = await supabase.from("contact_messages").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteContactMessage = async (id: string) => {
-  const { error } = await supabase.from("contact_messages").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Admin Profiles ─────────────────────────── */
-export const getAdminProfiles = () => safeSelect<any>("admin_profiles", { column: "created_at" })
-export const createAdminProfile = async (row: any) => {
-  const { data, error } = await supabase.from("admin_profiles").insert(row).select().single()
-  if (error) throw error
-  return data
-}
-export const updateAdminProfile = async (id: string, row: any) => {
-  const { error } = await supabase.from("admin_profiles").update(row).eq("id", id)
-  if (error) throw error
-}
-export const deleteAdminProfile = async (id: string) => {
-  const { error } = await supabase.from("admin_profiles").delete().eq("id", id)
-  if (error) throw error
-}
-
-/* ───────────────────────────── Storage Helpers ─────────────────────────── */
-export const uploadFile = async (file: File, bucket: string, path: string) => {
-  const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
+// File upload helper
+export async function uploadFile(file: File, bucket: string, fileName: string): Promise<string> {
+  const { data, error } = await supabaseAdmin.storage.from(bucket).upload(fileName, file, {
     upsert: true,
   })
 
   if (error) throw error
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(bucket).getPublicUrl(path)
-
-  return publicUrl
+  const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(data.path)
+  return urlData.publicUrl
 }
 
-export const deleteFile = async (bucket: string, path: string) => {
-  const { error } = await supabase.storage.from(bucket).remove([path])
+// Site Settings
+export async function getSiteSettings() {
+  const { data, error } = await supabaseAdmin.from("site_settings").select("*").single()
+  if (error && error.code !== "PGRST116") throw error
+  return data
+}
+
+export async function updateSiteSettings(settings: any) {
+  const { data, error } = await supabaseAdmin
+    .from("site_settings")
+    .upsert(settings, { onConflict: "id" })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Hero Section
+export async function getHeroSection() {
+  const { data, error } = await supabaseAdmin.from("hero_section").select("*").single()
+  if (error && error.code !== "PGRST116") throw error
+  return data
+}
+
+export async function updateHeroSection(heroData: any) {
+  const { data, error } = await supabaseAdmin
+    .from("hero_section")
+    .upsert(heroData, { onConflict: "id" })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// About Section
+export async function getAboutSection() {
+  const { data, error } = await supabaseAdmin.from("about_section").select("*").single()
+  if (error && error.code !== "PGRST116") throw error
+  return data
+}
+
+export async function updateAboutSection(aboutData: any) {
+  const { data, error } = await supabaseAdmin
+    .from("about_section")
+    .upsert(aboutData, { onConflict: "id" })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Personal Info
+export async function getPersonalInfo() {
+  const { data, error } = await supabaseAdmin.from("personal_info").select("*").limit(1).single()
+  if (error && error.code !== "PGRST116") throw error
+  return data
+}
+
+export async function updatePersonalInfo(personalData: any) {
+  // First try to get existing record
+  const existing = await getPersonalInfo()
+  
+  if (existing) {
+    const { data, error } = await supabaseAdmin
+      .from("personal_info")
+      .update(personalData)
+      .eq("id", existing.id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from("personal_info")
+      .insert(personalData)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+}
+
+// Skills
+export async function getSkills() {
+  const { data, error } = await supabaseAdmin.from("skills").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createSkill(skillData: any) {
+  const { data, error } = await supabaseAdmin.from("skills").insert(skillData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateSkill(id: string, skillData: any) {
+  const { data, error } = await supabaseAdmin.from("skills").update(skillData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSkill(id: string) {
+  const { error } = await supabaseAdmin.from("skills").delete().eq("id", id)
   if (error) throw error
 }
 
-export const uploadMultipleFiles = async (files: File[], bucket: string, folder: string) => {
-  const uploadPromises = files.map(async (file, index) => {
-    const fileName = `${folder}/${Date.now()}-${index}-${file.name}`
-    return uploadFile(file, bucket, fileName)
-  })
+// Tools
+export async function getTools() {
+  const { data, error } = await supabaseAdmin.from("tools").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
 
-  return Promise.all(uploadPromises)
+export async function createTool(toolData: any) {
+  const { data, error } = await supabaseAdmin.from("tools").insert(toolData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateTool(id: string, toolData: any) {
+  const { data, error } = await supabaseAdmin.from("tools").update(toolData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteTool(id: string) {
+  const { error } = await supabaseAdmin.from("tools").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Experiences
+export async function getExperiences() {
+  const { data, error } = await supabaseAdmin.from("experiences").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createExperience(experienceData: any) {
+  const { data, error } = await supabaseAdmin.from("experiences").insert(experienceData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateExperience(id: string, experienceData: any) {
+  const { data, error } = await supabaseAdmin.from("experiences").update(experienceData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteExperience(id: string) {
+  const { error } = await supabaseAdmin.from("experiences").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Products
+export async function getProducts() {
+  const { data, error } = await supabaseAdmin.from("products").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createProduct(productData: any) {
+  const { data, error } = await supabaseAdmin.from("products").insert(productData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateProduct(id: string, productData: any) {
+  const { data, error } = await supabaseAdmin.from("products").update(productData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteProduct(id: string) {
+  const { error } = await supabaseAdmin.from("products").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Projects
+export async function getProjects() {
+  const { data, error } = await supabaseAdmin.from("projects").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createProject(projectData: any) {
+  const { data, error } = await supabaseAdmin.from("projects").insert(projectData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateProject(id: string, projectData: any) {
+  const { data, error } = await supabaseAdmin.from("projects").update(projectData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteProject(id: string) {
+  const { error } = await supabaseAdmin.from("projects").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Case Studies
+export async function getCaseStudies() {
+  const { data, error } = await supabaseAdmin.from("case_studies").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createCaseStudy(caseStudyData: any) {
+  const { data, error } = await supabaseAdmin.from("case_studies").insert(caseStudyData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCaseStudy(id: string, caseStudyData: any) {
+  const { data, error } = await supabaseAdmin.from("case_studies").update(caseStudyData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCaseStudy(id: string) {
+  const { error } = await supabaseAdmin.from("case_studies").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Education
+export async function getEducation() {
+  const { data, error } = await supabaseAdmin.from("education").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createEducation(educationData: any) {
+  const { data, error } = await supabaseAdmin.from("education").insert(educationData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateEducation(id: string, educationData: any) {
+  const { data, error } = await supabaseAdmin.from("education").update(educationData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteEducation(id: string) {
+  const { error } = await supabaseAdmin.from("education").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Certifications
+export async function getCertifications() {
+  const { data, error } = await supabaseAdmin.from("certifications").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createCertification(certificationData: any) {
+  const { data, error } = await supabaseAdmin.from("certifications").insert(certificationData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCertification(id: string, certificationData: any) {
+  const { data, error } = await supabaseAdmin.from("certifications").update(certificationData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCertification(id: string) {
+  const { error } = await supabaseAdmin.from("certifications").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Animated Stats
+export async function getAnimatedStats() {
+  const { data, error } = await supabaseAdmin.from("animated_stats").select("*").order("order_index")
+  if (error) throw error
+  return data
+}
+
+export async function createAnimatedStat(statData: any) {
+  const { data, error } = await supabaseAdmin.from("animated_stats").insert(statData).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function updateAnimatedStat(id: string, statData: any) {
+  const { data, error } = await supabaseAdmin.from("animated_stats").update(statData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteAnimatedStat(id: string) {
+  const { error } = await supabaseAdmin.from("animated_stats").delete().eq("id", id)
+  if (error) throw error
+}
+
+// Contact Messages
+export async function getContactMessages() {
+  const { data, error } = await supabaseAdmin.from("contact_messages").select("*").order("created_at", { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function updateContactMessage(id: string, messageData: any) {
+  const { data, error } = await supabaseAdmin.from("contact_messages").update(messageData).eq("id", id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteContactMessage(id: string) {
+  const { error } = await supabaseAdmin.from("contact_messages").delete().eq("id", id)
+  if (error) throw error
 }
