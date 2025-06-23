@@ -4,9 +4,16 @@
 import { createClient, type PostgrestSingleResponse } from "@supabase/supabase-js"
 import type { Database } from "./types_db"
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase environment variables are not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.')
+}
+
 export const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
   {
     auth: { persistSession: true },
   },
@@ -14,6 +21,11 @@ export const supabase = createClient<Database>(
 
 /* ───────────────────────────────────────── helpers ─────────────────── */
 async function safeSelect<T>(table: string, orderBy?: { column: string; ascending?: boolean }): Promise<T[]> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase not configured, returning empty array')
+    return []
+  }
+
   let query = supabase.from<T>(table).select("*")
   if (orderBy) query = query.order(orderBy.column, { ascending: orderBy.ascending })
 
@@ -25,6 +37,11 @@ async function safeSelect<T>(table: string, orderBy?: { column: string; ascendin
 }
 
 async function safeSelectSingle<T>(table: string): Promise<T | null> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase not configured, returning null')
+    return null
+  }
+
   const { data, error } = await supabase.from<T>(table).select("*").single()
 
   if (error?.code === "42P01") return null
@@ -38,6 +55,11 @@ export const getHeroSection = () => safeSelectSingle<any>("hero_section")
 export const getAboutSection = () => safeSelectSingle<any>("about_section")
 
 export const getPersonalInfo = async () => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase not configured, returning null')
+    return null
+  }
+
   const { data, error } = await supabase.from("personal_info").select("*")
 
   if (error?.code === "42P01") return null
@@ -58,6 +80,11 @@ export const getAnimatedStats = () => safeSelect<any>("animated_stats", { column
 
 // Contact form submission
 export const submitContactMessage = async (message: any) => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase not configured, cannot submit contact message')
+    throw new Error('Database not configured')
+  }
+
   const { data, error } = await supabase.from("contact_messages").insert(message).select().single()
   if (error) throw error
   return data
